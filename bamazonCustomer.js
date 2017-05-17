@@ -14,6 +14,7 @@ connection.connect(function(err) {
   if (err) throw err;
 });
 
+var wallet = 2000;
 
 var start = function() {
   inquirer.prompt({
@@ -27,7 +28,7 @@ var start = function() {
   	}
    		else{
    			console.log("Sorry. Come back when you would like to purchase something.")
-   			end();
+        process.exit();
    		}
     });
   }
@@ -44,27 +45,51 @@ var buyItem = function() {
     name: "howMany",
     type: "input",
     message: "How many?",
-    validate: function(value) {
-      if (isNaN(value) === false) {
-        return true;
-      }
-      return false;
-    }
-  }]).then(function(answer) {
-    connection.query("INSERT INTO product VALUES ?", {
-      item_id: answer.item,
-    }, function(err) {
-      if (err) throw err;
+ 
+  		}]).then(function(answer) {
 
-      start();
-    });
-  });
-};
+	    		connection.query("SELECT stock_quantity, price FROM product WHERE item_id = " + answer.item + ";", 
+	    			function(err, res) {
 
-var soldOut = function() {
-  connection.query("SELECT * FROM product", function(err, results) {
-    
-      }
-}
+	      				if (err) throw err;
+	      				var totalAmount = res[0].stock_quantity;
+                var priceTracker = function(){
+                  var transaction = wallet - res[0].price;
+                  wallet = transaction;
+                  console.log("Your item was " + res[0].price + " dollars");
+                  console.log("You have " + wallet + " dollars left");
+                  console.log("There are " + res[0].stock_quantity + " items left");
+                }
+                
+                if(wallet >= res[0].price){
+                  priceTracker();
+                } else {
+                  console.log ("sorry, you don't have enough money.");
+                }
+
+	      				if(answer.howMany > totalAmount){
+	      					console.log("Sorry we don't have that many");
+	      					start();
+	      				} else{
+
+
+	      					var newAmount = parseInt(totalAmount) - parseInt(answer.howMany);
+
+	      					connection.query("UPDATE product SET stock_quantity = " + 
+	      						newAmount +" WHERE item_id = " + answer.item + ";", function(error, result){
+
+	      							if(error) throw error;
+
+                      start();
+	      						})
+	      				
+                }
+
+              
+    				});
+        });
+  		};
+
+
 
 start();
